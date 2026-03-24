@@ -1,0 +1,12 @@
+#!/usr/bin/env sh
+
+set -eu
+
+SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+BACKEND_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
+
+cd "$BACKEND_DIR"
+
+echo "backend husky pre-commit: running formatter and lint checks"
+pnpm run fmt:check
+pnpm run lint

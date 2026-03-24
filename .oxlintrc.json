@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["unicorn", "typescript", "oxc", "import"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "error",
+    "pedantic": "warn"
+  },
+  "env": {
+    "builtin": true,
+    "node": true,
+    "es2022": true
+  },
+  "ignorePatterns": ["dist/**", "node_modules/**", "coverage/**"],
+  "options": {
+    "reportUnusedDisableDirectives": "error"
+  },
+  "rules": {
+    "no-console": "off",
+    "import/no-cycle": "error",
+    "unicorn/prefer-node-protocol": "warn"
+  }
+}
