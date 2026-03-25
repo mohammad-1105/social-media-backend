@@ -7,6 +7,18 @@ BACKEND_DIR=$(CDPATH= cd -- "$SCRIPT_DIR/.." && pwd)
 
 cd "$BACKEND_DIR"
 
-echo "backend husky pre-commit: running formatter and lint checks"
-pnpm run fmt:check
-pnpm run lint
+run_step() {
+  STEP_NAME="$1"
+  shift
+
+  printf '\n[husky] %s\n' "$STEP_NAME"
+  "$@"
+}
+
+printf '\n[husky] pre-commit started in %s\n' "$BACKEND_DIR"
+
+run_step "Checking formatting" pnpm run fmt:check
+run_step "Running lint checks" pnpm run lint
+run_step "Building the project" pnpm run build
+
+printf '\n[husky] pre-commit finished successfully\n'

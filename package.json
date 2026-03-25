@@ -16,12 +16,11 @@
     "dev:tsc": "tsc --watch --preserveWatchOutput",
     "fmt": "oxfmt .",
     "fmt:check": "oxfmt --check .",
-    "hooks:install": "node .husky/install.mjs",
+    "hooks:install": "husky",
     "hooks:pre-commit": "sh .husky/pre-commit",
-    "hooks:pre-push": "sh .husky/pre-push",
     "lint": "oxlint . --tsconfig tsconfig.json",
     "lint:fix": "oxlint . --fix --tsconfig tsconfig.json",
-    "prepare": "node .husky/install.mjs",
+    "prepare": "husky",
     "start": "node dist/index.js"
   },
   "dependencies": {
