@@ -27,7 +27,7 @@ export const registerDTO = z
     loginType: z.enum(AvailableLoginsEnum).default("EMAIL_PASSWORD"),
   })
   .superRefine((data, ctx) => {
-    // Enforce conditional password requiredment
+    // Enforce conditional password requirement
     if (data.loginType === "EMAIL_PASSWORD" && !data.password) {
       ctx.addIssue({
         code: "custom",
