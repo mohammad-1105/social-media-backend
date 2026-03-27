@@ -1,17 +1,30 @@
 import type { Request, Response, NextFunction } from "express";
-import { ZodType } from "zod";
+import { z } from "zod";
 
 import { ApiError } from "../utils/api-error.js";
 
-export const validate = (schema: ZodType) => {
+export const validate = (schema: { body?: z.ZodType; params?: z.ZodType; query?: z.ZodType }) => {
   return (req: Request, _res: Response, next: NextFunction) => {
-    const result = schema.safeParse(req.body);
+    try {
+      if (schema.body) {
+        req.body = schema.body.parse(req.body);
+      }
 
-    if (!result.success) {
-      return ApiError.badRequest("Validation Failed", result.error.flatten);
+      if (schema.params) {
+        req.params = schema.params.parse(req.params) as Request["params"];
+      }
+
+      if (schema.query) {
+        req.query = schema.query.parse(req.query) as Request["query"];
+      }
+
+      next();
+    } catch (error: unknown) {
+      if (error instanceof z.ZodError) {
+        return next(ApiError.badRequest("Validation Failed", z.treeifyError(error)));
+      }
+
+      return next(error);
     }
-
-    req.body = result.data;
-    next();
   };
 };

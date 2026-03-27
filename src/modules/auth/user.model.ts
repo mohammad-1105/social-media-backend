@@ -28,8 +28,8 @@ export interface IUser extends Document {
 
   refreshToken?: string;
 
-  forgetPasswordToken?: string;
-  forgetPasswordTokenExpiry?: Date;
+  forgotPasswordToken?: string;
+  forgotPasswordTokenExpiry?: Date;
 
   emailVerificationToken?: string;
   emailVerificationTokenExpiry?: Date;
@@ -100,7 +100,6 @@ const userSchema = new Schema<IUser>(
       required: function () {
         return this.loginType === "EMAIL_PASSWORD";
       },
-      select: false,
     },
 
     loginType: {
@@ -119,11 +118,11 @@ const userSchema = new Schema<IUser>(
       select: false,
     },
 
-    forgetPasswordToken: {
+    forgotPasswordToken: {
       type: String,
       select: false,
     },
-    forgetPasswordTokenExpiry: Date,
+    forgotPasswordTokenExpiry: Date,
 
     emailVerificationToken: {
       type: String,
