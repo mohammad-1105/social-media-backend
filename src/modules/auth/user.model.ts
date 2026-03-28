@@ -95,8 +95,8 @@ const userSchema = new Schema<IUser>(
     password: {
       type: String,
       trim: true,
-      minlength: 6,
-      maxlength: 50,
+      minlength: 8,
+      maxlength: 64,
       required: function () {
         return this.loginType === "EMAIL_PASSWORD";
       },
@@ -134,8 +134,8 @@ const userSchema = new Schema<IUser>(
 );
 
 // explicit unique indexes (do not rely solely on `unique: true`)
-userSchema.index({ username: 1 }, { unique: true });
-userSchema.index({ email: 1 }, { unique: true });
+// userSchema.index({ username: 1 }, { unique: true });
+// userSchema.index({ email: 1 }, { unique: true });
 
 // hash password only when modified
 userSchema.pre("save", async function () {

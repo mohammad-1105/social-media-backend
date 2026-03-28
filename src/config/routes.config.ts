@@ -1,14 +1,8 @@
 import type { Express } from "express";
 
-export const setupRoutes = (app: Express) => {
-  // Health check
-  app.get("/api/hello", (_req, res) => {
-    res.status(200).json({
-      success: true,
-      message: "Hello from server",
-    });
-  });
+// routes import
+import userRouter from "@/modules/auth/user.routes.js";
 
-  // Feature routes
-  // app.use("/api/auth", authRoutes);
+export const setupRoutes = (app: Express) => {
+  app.use("/api/v1/users", userRouter);
 };

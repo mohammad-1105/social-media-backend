@@ -1,3 +1,7 @@
+import {
+  type UserLoginEnumType,
+  type UserRolesEnumType,
+} from "@/shared/constants/user.constants.js";
 // oxlint-disable no-negated-condition
 // oxlint-disable require-await
 import { ApiError } from "@/shared/utils/api-error.js";
@@ -6,21 +10,16 @@ import { type RegisterDTO } from "./dto/auth.dto.js";
 import { User, type IUser } from "./user.model.js";
 
 // sensitive fields we never sent to leak
-const SENSITIVE_FIELDS = `-password -forgetPasswordToken -forgetPasswordTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry`;
+const SENSITIVE_FIELDS = `-password -forgotPasswordToken -forgotPasswordTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry`;
 
-type CreateUserInput = Omit<RegisterDTO, "password"> & {
-  password?: string;
+type CreateUserInput = RegisterDTO & {
+  loginType: UserLoginEnumType;
   isEmailVerified: boolean;
+  role: UserRolesEnumType;
 };
 
 class UserRepository {
-  async findByEmailOrUsername({
-    email,
-    username,
-  }: {
-    email?: string;
-    username?: string;
-  }): Promise<IUser | null> {
+  async findByEmailOrUsername(email?: string, username?: string): Promise<IUser | null> {
     const conditions = [];
 
     if (email) conditions.push({ email: email.trim().toLowerCase() });

@@ -1,7 +1,5 @@
 import { z } from "zod";
 
-import { AvailableLoginsEnum } from "@/shared/constants/user.constants.js";
-
 const emailSchema = z.email("Invalid email format");
 
 const usernameSchema = z
@@ -17,29 +15,18 @@ const usernameSchema = z
 const passwordSchema = z
   .string()
   .min(8, { error: "Password must be at least 8 characters" })
-  .max(64, { error: "Password too long" })
+  .max(64, { error: "Password cannot exceed 64 characters" })
   .regex(/[A-Z]/, { error: "Must include uppercase letter" })
   .regex(/[a-z]/, { error: "Must include lowercase letter" })
   .regex(/[0-9]/, { error: "Must include number" });
 
-// register schema
 const registerSchema = z
   .object({
     username: usernameSchema,
     email: emailSchema,
-    password: passwordSchema.optional(),
-    loginType: z.enum(AvailableLoginsEnum).default("EMAIL_PASSWORD"),
+    password: passwordSchema,
   })
-  .superRefine((data, ctx) => {
-    // Enforce conditional password requirement
-    if (data.loginType === "EMAIL_PASSWORD" && !data.password) {
-      ctx.addIssue({
-        code: "custom",
-        message: "Password is required for EMAIL_PASSWORD login",
-        path: ["password"],
-      });
-    }
-  });
+  .strict();
 
 // login schema
 const loginSchema = z.object({
