@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 
-import jwt, { type SignOptions } from "jsonwebtoken";
+import jwt, { type JwtPayload, type SignOptions } from "jsonwebtoken";
 
 import { env } from "@/config/env.js";
 
@@ -38,6 +38,20 @@ export const generateAccessToken = ({ _id, email, username, role }: AccessTokenP
 
 export const generateRefreshToken = ({ _id }: RefreshTokenPayload) => {
   return signToken({ _id }, env.REFRESH_TOKEN_SECRET, env.REFRESH_TOKEN_EXPIRY as TokenExpiry);
+};
+
+export const getUserIdFromRefreshToken = (token: string) => {
+  const decoded = jwt.verify(token, env.REFRESH_TOKEN_SECRET);
+
+  if (
+    typeof decoded !== "object" ||
+    decoded === null ||
+    typeof (decoded as JwtPayload)["_id"] !== "string"
+  ) {
+    throw new Error("Invalid refresh token");
+  }
+
+  return (decoded as JwtPayload & { _id: string })["_id"];
 };
 
 export const generateTemporaryToken = () => {

@@ -35,6 +35,12 @@ type ActionEmailContentProps = {
   buttonLink: string;
 };
 
+type ForgotPasswordMailContentProps = {
+  username: string;
+  resetToken: string;
+  passwordResetUrl?: string;
+};
+
 const MAIL_PRODUCT_CONFIG = {
   name: "Modular Social Backend API",
   link: "https://mohammadaman.vercel.app",
@@ -151,14 +157,34 @@ const emailVerificationMailgenContent = (
   });
 };
 
-const forgotPasswordMailgenContent = (username: string, passwordResetUrl: string): MailContent => {
-  return createActionEmailContent({
-    username,
-    intro: "We received a request to reset your account password.",
-    instructions: "To reset your password, click on the following button or link:",
-    buttonText: "Reset password",
-    buttonLink: passwordResetUrl,
-  });
+const forgotPasswordMailgenContent = ({
+  username,
+  resetToken,
+  passwordResetUrl,
+}: ForgotPasswordMailContentProps): MailContent => {
+  if (passwordResetUrl) {
+    return createActionEmailContent({
+      username,
+      intro: "We received a request to reset your account password.",
+      instructions: "To reset your password, click on the following button or link:",
+      buttonText: "Reset password",
+      buttonLink: passwordResetUrl,
+    });
+  }
+
+  return {
+    body: {
+      name: username,
+      intro: [
+        "We received a request to reset your account password.",
+        `Use this reset token in your client or API request: ${resetToken}`,
+      ],
+      outro: [
+        "This reset token will expire in 20 minutes.",
+        "If you did not request this change, you can safely ignore this email.",
+      ],
+    },
+  };
 };
 
 export {

@@ -18,6 +18,7 @@ const envSchema = z.object({
   SMTP_PORT: z.coerce.number().int().min(1).max(65535),
   SMTP_USER: z.string().min(1),
   SMTP_PASS: z.string().min(1),
+  FORGOT_PASSWORD_REDIRECT_URL: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);

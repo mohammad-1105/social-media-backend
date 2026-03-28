@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { UserRolesEnum } from "@/shared/constants/user.constants.js";
+
 const emailSchema = z.email("Invalid email format");
 
 const usernameSchema = z
@@ -29,13 +31,30 @@ const registerSchema = z
   .strict();
 
 // login schema
-const loginSchema = z.object({
-  email: emailSchema,
-  password: passwordSchema,
-});
+const loginSchema = z
+  .object({
+    email: emailSchema.optional(),
+    username: usernameSchema.optional(),
+    password: passwordSchema,
+  })
+  .refine((data) => data.email || data.username, {
+    error: "Email or username is required",
+    path: ["email"],
+  });
 
 const verifyEmailParamsSchema = z.object({
   verificationToken: z.string().min(1, { error: "Verification token is required" }),
+});
+
+const resetPasswordParamsSchema = z.object({
+  resetToken: z.string().min(1, { error: "Reset token is required" }),
+});
+
+const userIdParamsSchema = z.object({
+  userId: z
+    .string()
+    .trim()
+    .regex(/^[0-9a-fA-F]{24}$/, { error: "Invalid user id" }),
 });
 
 // change password schema
@@ -51,7 +70,7 @@ const changePasswordSchema = z
 
 // forgot password schema
 const forgotPasswordSchema = z.object({
-  email: z.email("Invalid Email"),
+  email: emailSchema,
 });
 
 // reset password schema
@@ -59,19 +78,27 @@ const resetPasswordSchema = z.object({
   newPassword: passwordSchema,
 });
 
+const assignRoleSchema = z.object({
+  role: z.enum(UserRolesEnum),
+});
+
 type RegisterDTO = z.infer<typeof registerSchema>;
 type LoginDTO = z.infer<typeof loginSchema>;
 type ChangePasswordDTO = z.infer<typeof changePasswordSchema>;
 type ForgotPasswordDTO = z.infer<typeof forgotPasswordSchema>;
 type ResetPasswordDTO = z.infer<typeof resetPasswordSchema>;
+type AssignRoleDTO = z.infer<typeof assignRoleSchema>;
 
 export {
   registerSchema,
   loginSchema,
   verifyEmailParamsSchema,
+  resetPasswordParamsSchema,
+  userIdParamsSchema,
   changePasswordSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  assignRoleSchema,
 
   // types export
   type RegisterDTO,
@@ -79,4 +106,5 @@ export {
   type ChangePasswordDTO,
   type ForgotPasswordDTO,
   type ResetPasswordDTO,
+  type AssignRoleDTO,
 };

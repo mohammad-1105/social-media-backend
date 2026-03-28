@@ -5,23 +5,39 @@ import { compare } from "bcryptjs";
 import { UserLoginEnum, UserRolesEnum } from "@/shared/constants/user.constants.js";
 import { ApiError } from "@/shared/utils/api-error.js";
 import {
+  getUserIdFromRefreshToken,
   generateAccessToken,
   generateRefreshToken,
   generateTemporaryToken,
 } from "@/shared/utils/generate-tokens.js";
-import { emailVerificationMailgenContent, sendEmail } from "@/shared/utils/mail.js";
 
-import type { LoginDTO, RegisterDTO } from "./dto/auth.dto.js";
+import type {
+  AssignRoleDTO,
+  ChangePasswordDTO,
+  ForgotPasswordDTO,
+  LoginDTO,
+  RegisterDTO,
+  ResetPasswordDTO,
+} from "./dto/auth.dto.js";
+import {
+  sendEmailVerification,
+  sendForgotPasswordEmail,
+  type UserRequestMeta,
+} from "./user.mailer.js";
+import { type IUser } from "./user.model.js";
 import { userRepository } from "./user.repository.js";
-
-type RegisterRequestMeta = {
-  protocol: string;
-  host: string;
-};
 
 class UserService {
   private buildInvalidCredentialsError() {
     return ApiError.unauthorized("Invalid email or password");
+  }
+
+  private decodeRefreshToken(token: string) {
+    try {
+      return getUserIdFromRefreshToken(token);
+    } catch {
+      throw ApiError.unauthorized("Invalid refresh token");
+    }
   }
 
   private async generateAccessAndRefreshTokens(userId: string) {
@@ -44,13 +60,12 @@ class UserService {
     return { accessToken, refreshToken };
   }
 
-  private buildEmailVerificationUrl(requestMeta: RegisterRequestMeta, token: string) {
-    return `${requestMeta.protocol}://${requestMeta.host}/api/v1/users/verify-email/${encodeURIComponent(token)}`;
-  }
-
   private async assignEmailVerificationToken(
-    user: Awaited<ReturnType<typeof userRepository.create>>,
-    requestMeta: RegisterRequestMeta,
+    user: IUser,
+    requestMeta: UserRequestMeta,
+    options?: {
+      deleteUserOnFailure?: boolean;
+    },
   ) {
     const { unHashedToken, hashedToken, tokenExpiry } = generateTemporaryToken();
 
@@ -58,21 +73,18 @@ class UserService {
     user.emailVerificationTokenExpiry = new Date(tokenExpiry);
     await user.save({ validateBeforeSave: false });
 
-    const verificationUrl = this.buildEmailVerificationUrl(requestMeta, unHashedToken);
+    try {
+      await sendEmailVerification(user, requestMeta, unHashedToken);
+    } catch (error) {
+      if (options?.deleteUserOnFailure) {
+        await user.deleteOne();
+      }
 
-    const emailResult = await sendEmail({
-      email: user.email,
-      subject: "Please verify your email",
-      content: emailVerificationMailgenContent(user.username, verificationUrl),
-    });
-
-    if (!emailResult.ok) {
-      await user.deleteOne();
-      throw ApiError.internal("Failed to send verification email. Please try registering again");
+      throw error;
     }
   }
 
-  async register(data: RegisterDTO, requestMeta: RegisterRequestMeta) {
+  async register(data: RegisterDTO, requestMeta: UserRequestMeta) {
     const existing = await userRepository.findByEmailOrUsername(data.email, data.username);
 
     if (existing) throw ApiError.conflict("User with email or username already exists");
@@ -86,7 +98,9 @@ class UserService {
       isEmailVerified: false,
     });
 
-    await this.assignEmailVerificationToken(user, requestMeta);
+    await this.assignEmailVerificationToken(user, requestMeta, {
+      deleteUserOnFailure: true,
+    });
 
     const createdUser = await userRepository.findByIdSafe(user._id.toString());
 
@@ -100,7 +114,7 @@ class UserService {
   }
 
   async login(data: LoginDTO) {
-    const user = await userRepository.findByEmailOrUsername(data.email);
+    const user = await userRepository.findByEmailOrUsername(data.email, data.username);
 
     if (!user) {
       throw this.buildInvalidCredentialsError();
@@ -132,7 +146,7 @@ class UserService {
     }
 
     return {
-      loggedInUser,
+      user: loggedInUser,
       accessToken,
       refreshToken,
     };
@@ -159,6 +173,104 @@ class UserService {
     return {
       isEmailVerified: true,
     };
+  }
+
+  async resendEmailVerification(userId: string, requestMeta: UserRequestMeta) {
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw ApiError.notFound("User does not exist");
+    }
+
+    if (user.isEmailVerified) {
+      throw ApiError.conflict("Email is already verified");
+    }
+
+    await this.assignEmailVerificationToken(user, requestMeta);
+  }
+
+  async refreshAccessToken(incomingRefreshToken?: string) {
+    if (!incomingRefreshToken) {
+      throw ApiError.unauthorized("Refresh token is required");
+    }
+
+    const userId = this.decodeRefreshToken(incomingRefreshToken);
+    const user = await userRepository.findByIdWithRefreshToken(userId);
+
+    if (!user || !user.refreshToken) {
+      throw ApiError.unauthorized("Invalid refresh token");
+    }
+
+    if (incomingRefreshToken !== user.refreshToken) {
+      throw ApiError.unauthorized("Refresh token is expired or already used");
+    }
+
+    return this.generateAccessAndRefreshTokens(userId);
+  }
+
+  async forgotPassword(data: ForgotPasswordDTO) {
+    const user = await userRepository.findByEmail(data.email);
+
+    if (!user) {
+      throw ApiError.notFound("User does not exist");
+    }
+
+    const { unHashedToken, hashedToken, tokenExpiry } = generateTemporaryToken();
+
+    user.forgotPasswordToken = hashedToken;
+    user.forgotPasswordTokenExpiry = new Date(tokenExpiry);
+    await user.save({ validateBeforeSave: false });
+
+    try {
+      await sendForgotPasswordEmail(user, unHashedToken);
+    } catch (error) {
+      user.forgotPasswordToken = null;
+      user.forgotPasswordTokenExpiry = null;
+      await user.save({ validateBeforeSave: false });
+
+      throw error;
+    }
+  }
+
+  async resetForgottenPassword(resetToken: string, data: ResetPasswordDTO) {
+    const hashedToken = crypto.createHash("sha256").update(resetToken).digest("hex");
+    const user = await userRepository.findByForgotPasswordToken(hashedToken);
+
+    if (!user) {
+      throw ApiError.badRequest("Token is invalid or expired");
+    }
+
+    user.forgotPasswordToken = null;
+    user.forgotPasswordTokenExpiry = null;
+    user.password = data.newPassword;
+    await user.save({ validateBeforeSave: false });
+  }
+
+  async changePassword(userId: string, data: ChangePasswordDTO) {
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw ApiError.notFound("User does not exist");
+    }
+
+    const isCurrentPasswordValid = await compare(data.oldPassword, user.password);
+
+    if (!isCurrentPasswordValid) {
+      throw ApiError.badRequest("Invalid old password");
+    }
+
+    user.password = data.newPassword;
+    await user.save({ validateBeforeSave: false });
+  }
+
+  async assignRole(userId: string, data: AssignRoleDTO) {
+    const user = await userRepository.findById(userId);
+
+    if (!user) {
+      throw ApiError.notFound("User does not exist");
+    }
+
+    await userRepository.updateRole(userId, data.role);
   }
 }
 

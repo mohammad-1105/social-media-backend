@@ -9,8 +9,14 @@ import { ApiError } from "@/shared/utils/api-error.js";
 import { type RegisterDTO } from "./dto/auth.dto.js";
 import { User, type IUser } from "./user.model.js";
 
-// sensitive fields we never sent to leak
-const SENSITIVE_FIELDS = `-password -forgotPasswordToken -forgotPasswordTokenExpiry -emailVerificationToken -emailVerificationTokenExpiry`;
+const PUBLIC_USER_FIELDS = [
+  "-password",
+  "-refreshToken",
+  "-forgotPasswordToken",
+  "-forgotPasswordTokenExpiry",
+  "-emailVerificationToken",
+  "-emailVerificationTokenExpiry",
+].join(" ");
 
 type CreateUserInput = RegisterDTO & {
   loginType: UserLoginEnumType;
@@ -33,7 +39,7 @@ class UserRepository {
   }
 
   async findByEmail(email: string): Promise<IUser | null> {
-    return User.findOne({ email });
+    return User.findOne({ email: email.trim().toLowerCase() });
   }
 
   async findById(userId: string): Promise<IUser | null> {
@@ -41,21 +47,25 @@ class UserRepository {
   }
 
   async findByIdSafe(userId: string): Promise<IUser | null> {
-    return User.findById(userId).select(SENSITIVE_FIELDS);
+    return User.findById(userId).select(PUBLIC_USER_FIELDS);
+  }
+
+  async findByIdWithRefreshToken(userId: string): Promise<IUser | null> {
+    return User.findById(userId).select("+refreshToken");
   }
 
   async findByEmailVerificationToken(hashedToken: string): Promise<IUser | null> {
     return User.findOne({
       emailVerificationToken: hashedToken,
       emailVerificationTokenExpiry: { $gt: Date.now() },
-    });
+    }).select("+emailVerificationToken +emailVerificationTokenExpiry");
   }
 
   async findByForgotPasswordToken(hashedToken: string): Promise<IUser | null> {
     return User.findOne({
       forgotPasswordToken: hashedToken,
       forgotPasswordTokenExpiry: { $gt: Date.now() },
-    });
+    }).select("+forgotPasswordToken +forgotPasswordTokenExpiry");
   }
 
   async create(data: CreateUserInput): Promise<IUser> {
@@ -75,7 +85,7 @@ class UserRepository {
     });
   }
 
-  async updateRole(userId: string, role: string): Promise<void> {
+  async updateRole(userId: string, role: UserRolesEnumType): Promise<void> {
     await User.findByIdAndUpdate(userId, { role }, { new: true });
   }
 
@@ -94,7 +104,7 @@ class UserRepository {
         },
       },
       { new: true },
-    ).select(SENSITIVE_FIELDS);
+    ).select(PUBLIC_USER_FIELDS);
   }
 }
 
