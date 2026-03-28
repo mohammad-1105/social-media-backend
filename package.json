@@ -1,16 +1,20 @@
 {
-  "name": "modular-social-backend",
+  "name": "modular-auth-api",
   "version": "1.0.0",
-  "description": "A scalable, feature-based social media backend built with Node.js, Express, and MongoDB. Designed for learning clean architecture and easy frontend integration.",
+  "description": "A modular authentication API built with Node.js, Express, TypeScript, and MongoDB, featuring JWT auth, email verification, password recovery, and role-based access control.",
   "keywords": [
-    "backend",
+    "auth",
+    "auth-api",
     "clean-architecture",
+    "email-verification",
     "express",
+    "jwt",
     "modular-architecture",
     "mongodb",
     "nodejs",
+    "password-reset",
     "rest-api",
-    "social-media"
+    "typescript"
   ],
   "license": "ISC",
   "author": "Mohammad Aman",

@@ -42,7 +42,7 @@ type ForgotPasswordMailContentProps = {
 };
 
 const MAIL_PRODUCT_CONFIG = {
-  name: "Modular Social Backend API",
+  name: "Modular Auth API",
   link: "https://mohammadaman.vercel.app",
 } as const;
 
@@ -150,7 +150,7 @@ const emailVerificationMailgenContent = (
 ): MailContent => {
   return createActionEmailContent({
     username,
-    intro: "Welcome to the Modular Social Backend API! We're very excited to have you on board.",
+    intro: "Welcome to the Modular Auth API! We're very excited to have you on board.",
     instructions: "To verify your email, please click on the following button:",
     buttonText: "Verify your email",
     buttonLink: verificationUrl,
