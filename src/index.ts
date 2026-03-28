@@ -22,8 +22,7 @@ async function main() {
 // Gracefully shutdown
 function shutdown(signal: string) {
   console.log(`\n${signal} received -- shutting down gracefully`);
-
-  httpServer.on("close", async () => {
+  httpServer.close(async () => {
     await mongoose.disconnect();
     console.log(`Server Closed, DB Disconnected`);
     process.exit(0);

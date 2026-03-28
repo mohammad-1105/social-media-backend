@@ -3,7 +3,11 @@ import { z } from "zod";
 
 import { ApiError } from "../utils/api-error.js";
 
-export const validate = (schema: { body?: z.ZodType; params?: z.ZodType; query?: z.ZodType }) => {
+export const validateRequest = (schema: {
+  body?: z.ZodType;
+  params?: z.ZodType;
+  query?: z.ZodType;
+}) => {
   return (req: Request, _res: Response, next: NextFunction) => {
     try {
       if (schema.body) {

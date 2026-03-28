@@ -10,6 +10,10 @@ const envSchema = z.object({
   PORT: z.coerce.number().min(1).max(65535).default(3000),
   DATABASE_URL: z.string().min(1, "Missing DATABASE URL"),
   CORS_ORIGIN: z.string().min(1),
+  ACCESS_TOKEN_SECRET: z.string().min(1),
+  ACCESS_TOKEN_EXPIRY: z.string().min(1),
+  REFRESH_TOKEN_SECRET: z.string().min(1),
+  REFRESH_TOKEN_EXPIRY: z.string().min(1),
 });
 
 const parsed = envSchema.safeParse(process.env);
